@@ -20,6 +20,8 @@ class Comment(db.Model):
 
 @app.route('/')
 def index():
-    db.session.add(Comment("WTFFFFFFF"))
+    temp = Comment("WTFFFF")
+    db.session.add(temp)
+    db.session.commit()
     com = Comment.query.all()
     return jsonify({'response': com[0].data})
