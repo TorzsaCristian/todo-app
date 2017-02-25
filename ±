@@ -1,0 +1,63 @@
+import json
+from flask_sqlalchemy import SQLAlchemy
+from flask import Flask, jsonify, request, Response
+from sqlalchemy.exc import IntegrityError
+app = Flask(__name__)
+app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+mysqldb://root:root@localhost/todo_app'
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+db = SQLAlchemy(app)
+
+class Users(db.Model):
+	id = db.Column('id', db.Integer, primary_key = True)
+	name = db.Column('name', db.String(255))
+
+	def __init__(self, name):
+		self.name = name
+		
+	@property
+	def serialize(self):
+		return{
+			'id': self.id,
+			'name': self.name
+
+		}
+
+class Tasks(db.Model):
+	id = db.Column('id', db.Integer, primary_key = "True")
+	user_id = db.Column('user_id', db.Integer)
+	task = db.Column('task', db.String(255))
+
+	def __init__(self, user_id, task):
+		self.user_id = user_id
+		self.task = task
+
+	@property
+	def serialize(self):
+		return {
+			'id': self.id,
+			'user_id': self.user_id,
+			'task': self.task		
+		}
+
+@app.route('/users')
+def show_all_users():
+	lst = []
+	users = Users.query.all()
+	
+	for us in users:
+		lst.append(us.name)
+
+	return jsonify(users_dict={e.serialize for e in lst})
+
+@app.route('/user', methods=['GET', 'POST'])
+def user():
+	if request.method == 'POST':
+		user = Users(request.form['name'])
+		try:
+			db.session.add(user)
+			db.session.commit()
+			return 'user added!'
+		except IntegrityError, exc:
+			db.session.rollback()
+			return 'user already exists!'
