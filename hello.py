@@ -94,11 +94,11 @@ def new_user():
 	return jsonify({'username': user.username}),201 #, {'location': url_for('get_user', id = user.id, _external = True)};
 
 
-@app.route('/token')
+@app.route('/login')
 @auth.login_required
 def get_auth_token():
 	token = g.user.generate_auth_token(600)
-	return jsonify({'token': token.decode('ascii'), 'duration': 600})
+	return jsonify({'message': 'SUCCES', 'username': g.user.username,'token': token.decode('ascii')})
 
 
 @app.route('/resource')
