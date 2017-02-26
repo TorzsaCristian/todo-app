@@ -52,9 +52,9 @@ class User(db.Model):
 		try:
 			data = s.loads(token)
 		except SignatureExpired:
-			return 'Signature expired' #valid token, but expired
+			return None #valid token, but expired
 		except BadSignature:
-			return 'Bad signature' #invalid token
+			return None #invalid token
 		user = User.query.get(data['id'])
 		return user
 
@@ -84,10 +84,8 @@ def new_user():
 	username = request.form['username']
 	password = request.form['password']
 	if username is None or password is None:
-		return 'cacatAiciSUS'
 		abort(400); #missing arguments
 	if User.query.filter_by(username=username).first() is not None:
-		return 'cacatAicijos'
 		abort(400) #existing user
 	user = User(username)
 	user.hash_password(password)
