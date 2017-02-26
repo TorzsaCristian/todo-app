@@ -42,6 +42,10 @@ class User(db.Model):
 	def verify_password(self, password):
 		return pwd_context.verify(password, self.password_hash)
 
+	def generate_auth_token(self, expiration=600):
+		s = Serializer(app.config['SECRET_KEY'], expires_in=expiration)
+		return s.dumps({'id': self.id})
+
 	@staticmethod
 	def verify_auth_token(token):
 		s = Serializer(app.config['SECRET_KEY'])
@@ -66,6 +70,8 @@ def verify_password(username_or_token, password):
 	g.user = user
 	return True
 
+@auth.
+
 @app.route('/users/<int:id>')
 def get_user():
 	user = User.query.get(id)
@@ -89,6 +95,13 @@ def new_user():
 	db.session.add(user)
 	db.session.commit()
 	return jsonify({'username': user.username}),201 #, {'location': url_for('get_user', id = user.id, _external = True)};
+
+
+@app.route('/token')
+@auth.login_required
+def get_auth_token():
+	token = g.user.generate_auth_token(600)
+	return jsonify({'token': token.decode('ascii'), 'duration': 600})
 
 
 @app.route('/resource')
