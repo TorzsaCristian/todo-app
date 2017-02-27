@@ -111,7 +111,7 @@ def new_user():
 
 @app.route('/notes/', methods=['GET', 'POST'])
 @auth.login_required
-def get_notes():
+def notes():
 	if request.method == 'GET':
 		user_id = request.args.get('user_id')
 		notes = Note.query.filter(Note.user_id==user_id).all()
@@ -138,7 +138,3 @@ def get_auth_token():
 	return jsonify({'message': 'SUCCES', 'username': g.user.username,'token': token.decode('ascii'), 'user_id': g.user.id})
 
 
-@app.route('/cacat', methods=['POST'])
-@auth.login_required
-def get_resource():
-	pass
