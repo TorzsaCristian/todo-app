@@ -8,20 +8,11 @@ from flask_httpauth import HTTPBasicAuth
 from passlib.apps import custom_app_context as pwd_context
 from itsdangerous import (TimedJSONWebSignatureSerializer as Serializer, BadSignature, SignatureExpired)
 
-class MyJSONEncoder(JSONEncoder):
-	def default(self, obj):
-		if isinstance(obj, Users):
-			return {
-				'id': obj.id,
-				'name': obj.name
-			}
-		return super(MyJSONEncoder, self).default(obj)
-
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'to quick brown fox jumps over the lazy fucking mothafucka dog'
 app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+mysqldb://root:root@localhost/todo_app'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.json_encoder = MyJSONEncoder
+app.json_encoder = JSONEncoder
 
 db = SQLAlchemy(app)
 auth = HTTPBasicAuth()
@@ -57,6 +48,30 @@ class User(db.Model):
 			return None #invalid token
 		user = User.query.get(data['id'])
 		return user
+
+class Note(db.Model):
+	__tablename__ = 'notes'
+	id = db.Column(db.Integer, primary_key = True)
+	user_id = db.Column(db.Integer)
+	title = db.Column(db.String)
+	description = db.Column(db.String)
+	
+	def to_json(self):
+		return{
+			'id': self.id,
+			'user_id': self.user_id,
+			'title': self.title,
+			'description': self.description
+		}
+		
+	def from_json(self, source):
+		if 'user_id' in source:
+			self.user_id = source['user_id']
+		if 'title' in source:
+			self.title = source['title']
+		if 'description' in source:
+			self.description = source['description']
+
 
 @auth.verify_password
 def verify_password(username_or_token, password):
@@ -94,15 +109,36 @@ def new_user():
 	return jsonify({'username': user.username}),201 #, {'location': url_for('get_user', id = user.id, _external = True)};
 
 
+@app.route('/notes/', methods=['GET', 'POST'])
+@auth.login_required
+def get_notes():
+	if request.method == 'GET':
+		user_id = request.args.get('user_id')
+		notes = Note.query.filter(Note.user_id==user_id).all()
+		result = []
+		for note in notes:
+			result.append(note.to_json())
+		return jsonify(result)
+	else:
+		note = Note()
+		posted_json = {'user_id': request.form['user_id'],'title':  request.form['title'], 'description':  request.form['description']}
+		note.from_json(posted_json)
+		db.session.add(note)
+		db.session.commit()
+		#return jsonify({'message': 'Note added succesfully!', 'code': '200'})
+		return jsonify({'note': note.to_json(), 'message': 'Note added succesfully!', 'code': 200})
+
+
+
+
 @app.route('/login')
 @auth.login_required
 def get_auth_token():
 	token = g.user.generate_auth_token(600)
-	return jsonify({'message': 'SUCCES', 'username': g.user.username,'token': token.decode('ascii')})
+	return jsonify({'message': 'SUCCES', 'username': g.user.username,'token': token.decode('ascii'), 'user_id': g.user.id})
 
 
-@app.route('/resource')
+@app.route('/cacat', methods=['POST'])
 @auth.login_required
 def get_resource():
-	return jsonify({'data': 'Hello, %s!!' % g.user.username})
-
+	pass

@@ -52,11 +52,40 @@ class User(db.Model):
 		try:
 			data = s.loads(token)
 		except SignatureExpired:
-			return 'Signature expired' #valid token, but expired
+			return None #valid token, but expired
 		except BadSignature:
-			return 'Bad signature' #invalid token
-		user = User.query.get(['id'])
+			return None #invalid token
+		user = User.query.get(data['id'])
 		return user
+
+class Note(db.Model):
+	__tablename__ = 'notes'
+	id = db.Column(db.Integer, primary_key = True)
+	user_id = db.Column(db.Integer)
+	title = db.Column(db.String)
+	description = db.Column(db.String)
+
+	#def __init__(self, user_id, title, desciption):
+	#	self.user_id = user_id
+	#	self.title = title
+	#	self.description = description
+	
+	def to_json(self):
+		return{
+			'id': self.id,
+			'user_id': self.user_id,
+			'title': self.title,
+			'description': self.description
+		}
+		
+	def from_json(self, source):
+		if 'user_id' in source:
+			self.user_id = source['user_id']
+		if 'title' in source:
+			self.title = source['title']
+		if 'description' in source:
+			self.description = source['description']
+
 
 @auth.verify_password
 def verify_password(username_or_token, password):
@@ -84,10 +113,8 @@ def new_user():
 	username = request.form['username']
 	password = request.form['password']
 	if username is None or password is None:
-		return 'cacatAiciSUS'
 		abort(400); #missing arguments
 	if User.query.filter_by(username=username).first() is not None:
-		return 'cacatAicijos'
 		abort(400) #existing user
 	user = User(username)
 	user.hash_password(password)
@@ -96,15 +123,22 @@ def new_user():
 	return jsonify({'username': user.username}),201 #, {'location': url_for('get_user', id = user.id, _external = True)};
 
 
-@app.route('/token')
+@app.route('/login')
 @auth.login_required
 def get_auth_token():
 	token = g.user.generate_auth_token(600)
-	return jsonify({'token': token.decode('ascii'), 'duration': 600})
+	return jsonify({'message': 'SUCCES', 'username': g.user.username,'token': token.decode('ascii')})
 
 
-@app.route('/resource')
+@app.route('/notes', methods=['POST'])
 @auth.login_required
 def get_resource():
-	return jsonify({'data': 'Hello, %s!!' % g.user.username})
+	note = Note()
+	posted_json = {'user_id': request.form['user_id'],'title':  request.form['title'], 'description':  request.form['description']}
+	note.from_json(posted_json)
+	db.session.add(note)
+	db.session.commit()
+	#return jsonify({'message': 'Note added succesfully!', 'code': '200'})
+	return jsonify({note.to_json(), 'message': 'Added succesfully!', 'code': '200'})
+
 
