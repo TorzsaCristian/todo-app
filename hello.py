@@ -109,9 +109,9 @@ def new_user():
 	return jsonify({'username': user.username}),201 #, {'location': url_for('get_user', id = user.id, _external = True)};
 
 
-@app.route('/notes/', methods=['GET', 'POST'])
+@app.route('/notes/', methods=['GET', 'POST', 'PUT'])
 @auth.login_required
-def notes():
+def get_notes():
 	if request.method == 'GET':
 		user_id = request.args.get('user_id')
 		notes = Note.query.filter(Note.user_id==user_id).all()
@@ -119,7 +119,7 @@ def notes():
 		for note in notes:
 			result.append(note.to_json())
 		return jsonify(result)
-	else:
+	elif request.method == 'POST':
 		note = Note()
 		posted_json = {'user_id': request.form['user_id'],'title':  request.form['title'], 'description':  request.form['description']}
 		note.from_json(posted_json)
@@ -127,7 +127,13 @@ def notes():
 		db.session.commit()
 		#return jsonify({'message': 'Note added succesfully!', 'code': '200'})
 		return jsonify({'note': note.to_json(), 'message': 'Note added succesfully!', 'code': 200})
-
+	elif request.method == 'PUT':
+		note_id = request.form['note_id']
+		note = Note.query.filter(Note.id==note_id).first()
+		note.title = request.form['title']
+		note.description = request.form['description']
+		db.session.commit()
+		return jsonify({'note': note.to_json(), 'message': 'Note updated succesfully!', 'code':200})
 
 
 
@@ -138,3 +144,7 @@ def get_auth_token():
 	return jsonify({'message': 'SUCCES', 'username': g.user.username,'token': token.decode('ascii'), 'user_id': g.user.id})
 
 
+@app.route('/cacat', methods=['POST'])
+@auth.login_required
+def get_resource():
+	pass
